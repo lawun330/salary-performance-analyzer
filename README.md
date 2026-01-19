@@ -1,4 +1,4 @@
-# Employee Performance Prediction
+# Employee Performance & Salary Prediction
 
 ## Project Structure
 ```
