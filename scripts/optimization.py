@@ -325,7 +325,7 @@ def employer_minimize_salary(employee_profile, target_performance, pay_raise, pe
             break
 
     # use all budget if no salary is possible within budget
-    warning_message = None
+    warning_message = []
     if recommended_salary is None:
         budget_performance = employee_match_performance(employee_profile, bounds[1], performance_model, label_encoder, feature_info)
         recommended_salary = bounds[1]
@@ -333,7 +333,9 @@ def employer_minimize_salary(employee_profile, target_performance, pay_raise, pe
         
         # return warning message if target not achievable
         if budget_performance < target_performance:
-            warning_message = f"Target performance {target_performance} not achievable within the current budget. Maximum performance at ${bounds[1]:.2f} is {budget_performance}."
+            warning_message.append(target_performance)
+            warning_message.append(bounds[1])
+            warning_message.append(budget_performance)
 
     cost_per_performance = recommended_salary / target_performance
 
