@@ -64,4 +64,4 @@ This project serves as a learning exercise in Streamlit and machine learning. Th
 
 Copyright (c) 2026 La Wun Nannda.
 
-Licensed under the PolyForm Noncommercial License 1.0.0 (`PolyForm-Noncommercial-1.0.0`). See `LICENSE`.
+Licensed under the `PolyForm-Noncommercial-1.0.0`. See [LICENSE](LICENSE).
