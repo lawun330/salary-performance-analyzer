@@ -12,9 +12,9 @@ I learned several important concepts and techniques in this project:
   - Build a Streamlit dashboard for interactive inference and visualization
 
 ### Bidirectional Modeling (Salary ↔ Performance)
-  - Given pay and profile, estimate a realistic performance level
+  - Given pay and profile, estimate a realistic performance level:
     $$\text{Performance} = f(\text{Salary}, \text{Profile})$$
-  - Given target performance and profile, estimate a reasonable salary
+  - Given target performance and profile, estimate a reasonable salary:
     $$\text{Salary} = f(\text{Performance}, \text{Profile})$$
 
 ### Feature Preparation
