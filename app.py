@@ -6,6 +6,8 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
 
 from scripts.optimization import (
+    MINIMUM_MONTHLY_WAGE,
+    MAXIMUM_MONTHLY_WAGE,
     load_models,
     employee_maximize_salary,
     employee_match_performance,
@@ -19,12 +21,30 @@ from scripts.optimization import (
 st.set_page_config(
     page_title="Salary-Performance Analyzer",
     page_icon="💰",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 # title
 st.title("Salary-Performance Analyzer")
 st.markdown("Analyze optimal salary and performance relationships using machine learning models.")
+
+# UI tweaks (cleaner navigation tabs)
+st.markdown(
+    """
+<style>
+  /* Make tab labels larger and easier to click */
+  [data-testid="stTabs"] button[role="tab"] p {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  [data-testid="stTabs"] button[role="tab"] {
+    padding: 0.6rem 0.9rem;
+  }
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
 # load models (cached for performance)
 @st.cache_resource
@@ -43,35 +63,41 @@ except Exception as e:
     st.error(f"Error loading models: {e}")
     st.stop()
 
-# sidebar for navigation
-st.sidebar.title("Navigation")
-case = st.sidebar.radio(
-    "Select Analysis Case:",
-    ["Employee: Salary Recommendation",
-     "Employee: Performance Recommendation",
-     "Employer: Maximize Performance",
-     "Employer: Maximize ROI",
-     "Employer: Minimize Salary"]
-)
-
-# common employee profile inputs
-st.sidebar.header("Employee Profile")
-job_title = st.sidebar.selectbox(
+# select box inputs
+st.subheader("Employee Profile")
+job_title = st.selectbox(
     "Job Title",
-    options=['Developer', 'Manager', 'Analyst', 'Designer', 'Engineer', 'Consultant', 'Director']
+    options=['Developer', 'Manager', 'Analyst', 'Designer', 'Engineer', 'Consultant', 'Director'],
+    key="job_title",
 )
-education_level = st.sidebar.selectbox(
+education_level = st.selectbox(
     "Education Level",
-    options=['High School', 'Bachelor', 'Master', 'PhD']
+    options=['High School', 'Bachelor', 'Master', 'PhD'],
+    key="education_level",
 )
 
-work_hours = st.sidebar.number_input("Work Hours Per Week (20-60)", min_value=20, max_value=60, value=40)
-projects_handled = st.sidebar.number_input("Projects Handled (1-20)", min_value=1, max_value=20, value=5)
-overtime_hours = st.sidebar.number_input("Overtime Hours (0-40)", min_value=0, max_value=40, value=5)
-sick_days = st.sidebar.number_input("Sick Days (0-30)", min_value=0, max_value=30, value=2)
-remote_work_frequency = st.sidebar.number_input("Remote Work Frequency (0%-100%)", min_value=0, max_value=100, value=50)
-team_size = st.sidebar.number_input("Team Size (1-50)", min_value=1, max_value=50, value=8)
-training_hours = st.sidebar.number_input("Training Hours (0-200)", min_value=0, max_value=200, value=50)
+# expander inputs
+with st.expander("More employee inputs", expanded=False):
+    # 5 columns x 2 rows (7 fields total)
+    r1 = st.columns(5)
+    with r1[0]:
+        work_hours = st.number_input("Work Hours Per Week (20-60)", min_value=20, max_value=60, value=40, key="work_hours")
+    with r1[1]:
+        projects_handled = st.number_input("Projects Handled (1-20)", min_value=1, max_value=20, value=5, key="projects_handled")
+    with r1[2]:
+        overtime_hours = st.number_input("Overtime Hours (0-40)", min_value=0, max_value=40, value=5, key="overtime_hours")
+    with r1[3]:
+        sick_days = st.number_input("Sick Days (0-30)", min_value=0, max_value=30, value=2, key="sick_days")
+    with r1[4]:
+        remote_work_frequency = st.number_input("Remote Work Frequency (0%-100%)", min_value=0, max_value=100, value=50, key="remote_work_frequency")
+
+    r2 = st.columns(5)
+    with r2[0]:
+        team_size = st.number_input("Team Size (1-50)", min_value=1, max_value=50, value=8, key="team_size")
+    with r2[1]:
+        training_hours = st.number_input("Training Hours (0-200)", min_value=0, max_value=200, value=50, key="training_hours")
+
+st.divider()
 
 # create employee profile dictionary
 employee_profile = {
@@ -101,19 +127,31 @@ def format_performance(value):
             return label
     return str(value)
 
+# fixed navigation tabs
+tabs = st.tabs(
+    [
+        "Salary recommendation",
+        "Performance recommendation",
+        "Maximize performance",
+        "Maximize ROI",
+        "Minimize salary",
+    ]
+)
+
 # main content area
-if case == "Employee: Salary Recommendation":
+with tabs[0]:
     st.header("Case 1: Employee - Salary Recommendation")
     st.markdown("**As an employee, find the optimal salary to request based on your performance level.**")
     
     target_choice = st.selectbox(
         "Your Performance Level",
         options=performance_options,
-        format_func=lambda x: x[0]
+        format_func=lambda x: x[0],
+        key="target_performance_case1",
     )
     target_performance = target_choice[1]
     
-    if st.button("Calculate Recommended Salary"):
+    if st.button("Calculate Recommended Salary", key="btn_case1"):
         try:
             recommended_salary = employee_maximize_salary(
                 employee_profile,
@@ -130,7 +168,7 @@ if case == "Employee: Salary Recommendation":
         except Exception as e:
             st.error(f"Error: {e}")
 
-elif case == "Employee: Performance Recommendation":
+with tabs[1]:
     st.header("Case 2: Employee - Performance Recommendation")
     st.markdown("**As an employee, find the appropriate performance level to deliver based on the offered salary.**")
     
@@ -139,10 +177,11 @@ elif case == "Employee: Performance Recommendation":
         min_value=3850,
         max_value=9000,
         value=6000,
-        step=100
+        step=100,
+        key="offered_salary_case2",
     )
     
-    if st.button("Calculate Expected Performance"):
+    if st.button("Calculate Expected Performance", key="btn_case2"):
         try:
             recommended_performance = employee_match_performance(
                 employee_profile,
@@ -161,7 +200,7 @@ elif case == "Employee: Performance Recommendation":
         except Exception as e:
             st.error(f"Error: {e}")
 
-elif case == "Employer: Maximize Performance":
+with tabs[2]:
     st.header("Case 3A: Employer - Maximize Performance")
     st.markdown("**As an employer, find the salary within budget that maximizes employee performance.**")
     
@@ -170,10 +209,11 @@ elif case == "Employer: Maximize Performance":
         min_value=3850,
         max_value=9000,
         value=7500,
-        step=50
+        step=50,
+        key="salary_budget_case3a",
     )
     
-    if st.button("Find Optimal Salary"):
+    if st.button("Find Optimal Salary", key="btn_case3a"):
         try:
             recommended_salary, expected_performance, curve = employer_maximize_performance(
                 employee_profile,
@@ -202,7 +242,7 @@ elif case == "Employer: Maximize Performance":
         except Exception as e:
             st.error(f"Error: {e}")
 
-elif case == "Employer: Maximize ROI":
+with tabs[3]:
     st.header("Case 3B: Employer - Maximize ROI")
     st.markdown("**As an employer, find the salary within budget that maximizes ROI (performance per dollar).**")
     
@@ -211,10 +251,11 @@ elif case == "Employer: Maximize ROI":
         min_value=3850,
         max_value=9000,
         value=7500,
-        step=50
+        step=50,
+        key="salary_budget_case3b",
     )
     
-    if st.button("Find Optimal ROI"):
+    if st.button("Find Optimal ROI", key="btn_case3b"):
         try:
             recommended_salary, expected_performance, roi, curve = employer_maximize_roi(
                 employee_profile,
@@ -246,7 +287,7 @@ elif case == "Employer: Maximize ROI":
         except Exception as e:
             st.error(f"Error: {e}")
 
-elif case == "Employer: Minimize Salary":
+with tabs[4]:
     st.header("Case 4: Employer - Minimize Salary")
     st.markdown("**As an employer, find the minimum salary required to achieve a specific performance level.**")
     
@@ -255,34 +296,26 @@ elif case == "Employer: Minimize Salary":
         target_choice = st.selectbox(
             "Specific Performance Level",
             options=performance_options,
-            format_func=lambda x: x[0]
+            format_func=lambda x: x[0],
+            key="target_performance_case4",
         )
         target_performance = target_choice[1]
     with col2:
         salary_budget = st.number_input(
-            "Salary Budget ($) - Optional",
-            min_value=3850,
-            max_value=9000,
+            "Optional Salary Budget ($)",
+            min_value=MINIMUM_MONTHLY_WAGE,
+            max_value=MAXIMUM_MONTHLY_WAGE,
             value=None,
             step=50,
-            help="Optional: Maximum salary budget constraint"
+            help="Optional: Maximum salary budget constraint",
+            key="salary_budget_case4",
         )
     
-    pay_raise = st.number_input(
-        "Pay Raise Increment ($) - For Compatibility",
-        min_value=100,
-        max_value=1000,
-        value=500,
-        step=100,
-        help="Parameter kept for compatibility (not actively used in grid search)"
-    )
-    
-    if st.button("Find Minimum Salary"):
+    if st.button("Find Minimum Salary", key="btn_case4"):
         try:
             recommended_salary, expected_performance, cost_per_perf, curve, warning_message = employer_minimize_salary(
                 employee_profile,
                 target_performance,
-                pay_raise,
                 performance_model,
                 label_encoder,
                 feature_info,

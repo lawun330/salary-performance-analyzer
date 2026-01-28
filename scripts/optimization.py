@@ -285,7 +285,7 @@ def employer_maximize_roi(employee_profile, salary_budget, performance_model, la
 ########################################################################################################
 
 # Case 4: (For Employer) Salary Minimization for Target Performance
-def employer_minimize_salary(employee_profile, target_performance, pay_raise, performance_model, label_encoder, 
+def employer_minimize_salary(employee_profile, target_performance, performance_model, label_encoder, 
                             feature_info, salary_budget=None, 
                             salary_range=(MINIMUM_MONTHLY_WAGE, MAXIMUM_MONTHLY_WAGE)):
     """
@@ -294,7 +294,6 @@ def employer_minimize_salary(employee_profile, target_performance, pay_raise, pe
     Args:
         employee_profile: dict with employee features (without Monthly_Salary and Performance_Score)
         target_performance: desired performance level (1-5) that employer needs (can be integer like 4.0 or fractional like 4.5)
-        pay_raise: salary increment amount (parameter kept for compatibility, not actively used in grid search)
         performance_model: trained performance prediction model
         label_encoder: label encoder for performance scores
         feature_info: dictionary containing feature order information
@@ -309,12 +308,12 @@ def employer_minimize_salary(employee_profile, target_performance, pay_raise, pe
         warning_message: Warning message string if target not achievable
     """
 
-    # set bounds for visualization
+    # set the bounds for optimization search
     bounds = (salary_range[0], min(salary_budget or salary_range[1], salary_range[1]))
-    
+
     # use grid search
     salaries_to_test = np.linspace(bounds[0], bounds[1], 200)
-    
+
     # find minimum salary where performance >= target_performance
     recommended_salary = None
     for s in salaries_to_test:
