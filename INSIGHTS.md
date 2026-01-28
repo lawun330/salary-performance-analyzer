@@ -47,5 +47,6 @@ I learned several important concepts and techniques in this project:
 
 ### Streamlit Dashboard Engineering
 - **Caching**: `st.cache_resource` avoids reloading artifacts on every rerun and keeps the app responsive.
-- **UI**: Sidebar inputs + main results area keeps the workflow easy to follow.
+- **UI**: Fixed section and tab-based navigation keeps the workflow easy to follow.
 - **Visualization**: Plotting a curve helps validate and explain recommendations.
+- **Deployment**: By pushing the project to a <u>public</u> GitHub repository and connecting it to [Streamlit Community Cloud](https://streamlit.io/cloud), the dashboard becomes accessible to anyone via a shareable web link, with zero server setup required.
