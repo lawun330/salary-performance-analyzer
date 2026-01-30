@@ -1,11 +1,14 @@
 import os
 import json
 
+# project root
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def load_wage_bounds():
     """Load wage bounds from JSON file."""
-
     # load data
-    path = os.path.join(os.path.dirname(__file__), "data", "wage_bounds.json")
+    path = os.path.join(_PROJECT_ROOT, "data", "wage_bounds.json")
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
     
