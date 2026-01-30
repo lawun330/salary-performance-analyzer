@@ -22,7 +22,7 @@ from scripts.optimization import (
 
 # page configuration
 st.set_page_config(
-    page_title="Salary-Performance Analyzer",
+    page_title="Salary-Performance Analyzer (Monthly Salary)",
     page_icon="💰",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -31,23 +31,14 @@ st.set_page_config(
 # title
 st.title("Salary-Performance Analyzer")
 st.markdown("Analyze optimal salary and performance relationships using machine learning models.")
+st.warning("**Monthly salary:** All amounts in this app are monthly (not yearly). Some countries report salary per year; here we use monthly.")
+st.warning("**Synthetic data:** The models are trained on a synthetic dataset, which may not reflect the real world. This app is a testament to what one can try as self-study.")
 
-# UI tweaks (cleaner navigation tabs)
-st.markdown(
-    """
-<style>
-  /* Make tab labels larger and easier to click */
-  [data-testid="stTabs"] button[role="tab"] p {
-    font-size: 1.05rem;
-    font-weight: 600;
-  }
-  [data-testid="stTabs"] button[role="tab"] {
-    padding: 0.6rem 0.9rem;
-  }
-</style>
-""",
-    unsafe_allow_html=True,
-)
+# load custom CSS file
+css_path = os.path.join(os.path.dirname(__file__), "app.css")
+if os.path.isfile(css_path):
+    with open(css_path, "r", encoding="utf-8") as f:
+        st.markdown(f"<style>\n{f.read()}\n</style>", unsafe_allow_html=True)
 
 # load models (cached for performance)
 @st.cache_resource
@@ -133,11 +124,11 @@ def format_performance(value):
 # fixed navigation tabs
 tabs = st.tabs(
     [
-        "Salary recommendation",
+        "Monthly salary recommendation",
         "Performance recommendation",
         "Maximize performance",
         "Maximize ROI",
-        "Minimize salary",
+        "Minimize monthly salary",
     ]
 )
 
@@ -154,7 +145,7 @@ with tabs[0]:
     )
     target_performance = target_choice[1]
     
-    if st.button("Calculate Recommended Salary", key="btn_case1"):
+    if st.button("Calculate Recommended Monthly Salary", key="btn_case1"):
         try:
             recommended_salary = employee_maximize_salary(
                 employee_profile,
@@ -163,9 +154,9 @@ with tabs[0]:
                 feature_info
             )
             
-            st.success(f"### Recommended Salary: ${recommended_salary:,.2f}")
+            st.success(f"### Recommended Monthly Salary: ${recommended_salary:,.2f}")
             st.info(
-                f"Based on your performance level, the recommended salary is ${recommended_salary:,.2f} per month."
+                f"Based on your performance level, the recommended monthly salary is ${recommended_salary:,.2f}."
             )
             
         except Exception as e:
@@ -176,9 +167,9 @@ with tabs[1]:
     st.markdown("**As an employee, find the appropriate performance level to deliver based on the offered salary.**")
     
     offered_salary = st.number_input(
-        "Offered Salary ($)",
-        min_value=3850,
-        max_value=9000,
+        "Offered Monthly Salary ($)",
+        min_value=MINIMUM_MONTHLY_WAGE,
+        max_value=MAXIMUM_MONTHLY_WAGE,
         value=6000,
         step=100,
         key="offered_salary_case2",
@@ -196,7 +187,7 @@ with tabs[1]:
             
             st.success(f"### Expected Performance: {format_performance(recommended_performance)}")
             st.info(
-                f"For an offered salary of ${offered_salary:,.2f}, "
+                f"For an offered monthly salary of ${offered_salary:,.2f}, "
                 f"the expected performance level is {format_performance(recommended_performance).lower()}."
             )
             
@@ -208,9 +199,9 @@ with tabs[2]:
     st.markdown("**As an employer, find the salary within budget that maximizes employee performance.**")
     
     salary_budget = st.number_input(
-        "Salary Budget ($)",
-        min_value=3850,
-        max_value=9000,
+        "Monthly Salary Budget ($)",
+        min_value=MINIMUM_MONTHLY_WAGE,
+        max_value=MAXIMUM_MONTHLY_WAGE,
         value=7500,
         step=50,
         key="salary_budget_case3a",
@@ -228,17 +219,17 @@ with tabs[2]:
             
             col1, col2 = st.columns(2)
             with col1:
-                st.success(f"### Recommended Salary: ${recommended_salary:,.2f}")
+                st.success(f"### Recommended Monthly Salary: ${recommended_salary:,.2f}")
             with col2:
                 st.success(f"### Expected Performance: {format_performance(expected_performance)}")
             
             st.info(
-                f"To maximize performance within a budget of \${salary_budget:,.2f}, "
-                f"offer \${recommended_salary:,.2f} which yields {format_performance(expected_performance).lower()}."
+                f"To maximize performance within a monthly salary budget of \${salary_budget:,.2f}, "
+                f"offer \${recommended_salary:,.2f}/month which yields {format_performance(expected_performance).lower()}."
             )
             
             # visualization
-            st.subheader("Performance vs Salary Curve")
+            st.subheader("Performance vs Monthly Salary Curve")
             fig = plot_performance_curve(curve, recommended_salary, expected_performance)
             st.pyplot(fig)
             
@@ -250,9 +241,9 @@ with tabs[3]:
     st.markdown("**As an employer, find the salary within budget that maximizes ROI (performance per dollar).**")
     
     salary_budget = st.number_input(
-        "Salary Budget ($)",
-        min_value=3850,
-        max_value=9000,
+        "Monthly Salary Budget ($)",
+        min_value=MINIMUM_MONTHLY_WAGE,
+        max_value=MAXIMUM_MONTHLY_WAGE,
         value=7500,
         step=50,
         key="salary_budget_case3b",
@@ -270,20 +261,20 @@ with tabs[3]:
             
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.success(f"### Recommended Salary: ${recommended_salary:,.2f}")
+                st.success(f"### Recommended Monthly Salary: ${recommended_salary:,.2f}")
             with col2:
                 st.success(f"### Expected Performance: {format_performance(expected_performance)}")
             with col3:
                 st.success(f"### ROI: {roi:.6f}")
             
             st.info(
-                f"To maximize ROI within a budget of \${salary_budget:,.2f}, "
-                f"offer \${recommended_salary:,.2f} which yields {format_performance(expected_performance).lower()} "
+                f"To maximize ROI within a monthly salary budget of \${salary_budget:,.2f}, "
+                f"offer \${recommended_salary:,.2f}/month which yields {format_performance(expected_performance).lower()} "
                 f"with ROI of {roi:.6f} (performance per dollar)."
             )
             
             # visualization
-            st.subheader("Performance vs Salary Curve")
+            st.subheader("Performance vs Monthly Salary Curve")
             fig = plot_performance_curve(curve, recommended_salary, expected_performance)
             st.pyplot(fig)
             
@@ -291,8 +282,8 @@ with tabs[3]:
             st.error(f"Error: {e}")
 
 with tabs[4]:
-    st.header("Case 4: Employer - Minimize Salary")
-    st.markdown("**As an employer, find the minimum salary required to achieve a specific performance level.**")
+    st.header("Case 4: Employer - Minimize Monthly Salary")
+    st.markdown("**As an employer, find the minimum monthly salary required to achieve a specific performance level.**")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -305,16 +296,16 @@ with tabs[4]:
         target_performance = target_choice[1]
     with col2:
         salary_budget = st.number_input(
-            "Optional Salary Budget ($)",
+            "Optional Monthly Salary Budget ($)",
             min_value=MINIMUM_MONTHLY_WAGE,
             max_value=MAXIMUM_MONTHLY_WAGE,
             value=None,
             step=50,
-            help="Optional: Maximum salary budget constraint",
+            help="Optional: Maximum monthly salary budget constraint",
             key="salary_budget_case4",
         )
     
-    if st.button("Find Minimum Salary", key="btn_case4"):
+    if st.button("Find Minimum Monthly Salary", key="btn_case4"):
         try:
             recommended_salary, expected_performance, cost_per_perf, curve, warning_message = employer_minimize_salary(
                 employee_profile,
@@ -327,7 +318,7 @@ with tabs[4]:
                         
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.success(f"### Minimum Salary: ${recommended_salary:,.2f}")
+                st.success(f"### Minimum Monthly Salary: ${recommended_salary:,.2f}")
             with col2:
                 st.success(f"### Expected Performance: {format_performance(expected_performance)}")
             with col3:
@@ -335,17 +326,17 @@ with tabs[4]:
             
             if len(warning_message) > 0:
                 st.warning(
-                    f"The current budget cannot achieve {format_performance(warning_message[0]).lower()}. "
-                    f"Only {format_performance(warning_message[2]).lower()} is achievable with ${warning_message[1]:.2f}."
+                    f"The current monthly salary budget cannot achieve {format_performance(warning_message[0]).lower()}. "
+                    f"Only {format_performance(warning_message[2]).lower()} is achievable with ${warning_message[1]:.2f}/month."
                 )
             else:
                 st.info(
                     f"To achieve {format_performance(target_performance).lower()}, "
-                    f"offer a minimum salary of ${recommended_salary:,.2f}."
+                    f"offer a minimum monthly salary of ${recommended_salary:,.2f}."
                 )
             
             # visualization
-            st.subheader("Performance vs Salary Curve")
+            st.subheader("Performance vs Monthly Salary Curve")
             fig = plot_performance_curve(curve, recommended_salary, expected_performance)
             ## add target line
             ax = fig.gca()
