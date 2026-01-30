@@ -299,9 +299,9 @@ with tabs[4]:
             "Optional Monthly Salary Budget ($)",
             min_value=0,
             max_value=MAXIMUM_MONTHLY_WAGE,
-            value=None,
+            value=0,
             step=50,
-            help="Optional: Maximum monthly salary budget constraint",
+            help="Optional: Maximum monthly salary budget.",
             key="salary_budget_case4",
         )
     
@@ -328,7 +328,7 @@ with tabs[4]:
             if len(warning_message) > 0:
                 st.warning(
                     f"The current monthly salary budget cannot achieve {format_performance(warning_message[0]).lower()}. "
-                    f"Only {format_performance(warning_message[2]).lower()} is achievable with ${warning_message[1]:.2f}/month."
+                    f"Only {format_performance(warning_message[2]).lower()} is achievable; minimum recommended is ${recommended_salary:,.2f}/month (never below minimum wage)."
                 )
             else:
                 st.info(

@@ -322,9 +322,12 @@ def employer_minimize_salary(employee_profile, target_performance, performance_m
         expected_performance = performances[best_idx]
         warning_message = []
     else:
-        recommended_salary = max_salary
-        expected_performance = performances[-1]
-        warning_message = [target_performance, max_salary, expected_performance] if expected_performance < target_performance else []
+        # never recommend below minimum wage; recommend min wage or full budget
+        recommended_salary = max(max_salary, start_salary)
+        # performance at the salary we actually recommend: [0]=min wage, [-1]=full budget
+        expected_performance = performances[0] if recommended_salary == start_salary else performances[-1]
+        # warn if target not achievable
+        warning_message = [target_performance, recommended_salary, expected_performance] if expected_performance < target_performance else []
 
     cost_per_performance = recommended_salary / target_performance
 
