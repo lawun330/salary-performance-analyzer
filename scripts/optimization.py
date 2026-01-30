@@ -5,14 +5,13 @@ import matplotlib.pyplot as plt
 import joblib
 import os
 
-# constants based on the used dataset
-MINIMUM_MONTHLY_WAGE = 3850
-MAXIMUM_MONTHLY_WAGE = 9000
+# import wage bounds
+from scripts.load_wage_bounds import load_wage_bounds
+MINIMUM_MONTHLY_WAGE, MAXIMUM_MONTHLY_WAGE = load_wage_bounds()
 
 ########################################################################################################
 
 # load models and feature info
-## use case: label_encoder, performance_model, salary_model, feature_info = load_models()
 ## use case: label_encoder, performance_model, salary_model, feature_info = load_models(base_path='.')
 def load_models(base_path=None):
     """
@@ -100,6 +99,35 @@ def prepare_features_for_salary_prediction(employee_profile, target_performance,
 
 ########################################################################################################
 
+# Helper function
+def predict_same_employee_performance_batch(employee_profile, salaries, performance_model, label_encoder, feature_info):
+    """
+    Vectorize performance prediction for many salary values (one batch call instead of N calls).
+
+    Args:
+        employee_profile: dict with employee features (without Monthly_Salary and Performance_Score)
+        salaries: 1D array of salary values to evaluate
+        performance_model: trained performance prediction model
+        label_encoder: label encoder for performance scores
+        feature_info: dictionary containing feature order information
+
+    Returns:
+        performances: 1D array of performance scores (same length as salaries)
+    """
+    n = len(salaries)  # get the number of performance predictions to make
+    feature_order = feature_info['all_features']  # get correct column order
+
+    # duplicate employee profile for each salary (same profile with different Monthly_Salary)
+    df = pd.DataFrame([employee_profile] * n)
+    df['Monthly_Salary'] = salaries
+    df = df[feature_order]  # reorder columns to match training data
+
+    pred_encoded = performance_model.predict(df)  # predict performance for each salary
+    performances = label_encoder.inverse_transform(pred_encoded)  # decode the encoded performance label back to original Performance_Score scale
+    return np.asarray(performances)
+
+########################################################################################################
+
 # Case 1: (For Employee) Salary Recommendation Based on Target Performance
 def employee_maximize_salary(employee_profile, target_performance, salary_model, feature_info, 
                             salary_range=(MINIMUM_MONTHLY_WAGE, MAXIMUM_MONTHLY_WAGE)):
@@ -182,38 +210,25 @@ def employer_maximize_performance(employee_profile, salary_budget, performance_m
     # set the bounds for optimization search
     bounds = (salary_range[0], min(salary_budget, salary_range[1]))
     
-    # use grid search
+    # use vectorized grid search
     salaries_to_test = np.linspace(bounds[0], bounds[1], 200)  # more points = better coverage
+    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model, label_encoder, feature_info)
     
-    # evaluate performance at each salary
-    performances = [employee_match_performance(employee_profile, s, performance_model, label_encoder, feature_info) 
-                    for s in salaries_to_test]
-    
-    # find the maximum performance and corresponding salary
-    max_performance = max(performances)
-    max_performance_indices = [i for i, p in enumerate(performances) if p == max_performance]
-    
+    # find the maximum performance
+    max_performance = np.max(performances)
+    max_performance_indices = np.where(performances == max_performance)[0]
+
     # pick the lowest salary among all salaries that give the same performance
     best_idx = max_performance_indices[0]  # first index = lowest salary
     recommended_salary = salaries_to_test[best_idx]
     expected_performance = performances[best_idx]
-    
-    # check performance exactly at budget limit (in case grid search missed it)
-    budget_performance = employee_match_performance(employee_profile, salary_budget, performance_model, label_encoder, feature_info)
-    if budget_performance > max_performance:
-        recommended_salary = salary_budget
-        expected_performance = budget_performance
-    elif budget_performance == max_performance:
-        # use the lower of the two if budget also gives max performance
-        recommended_salary = min(recommended_salary, salary_budget)
 
     # visualization
-    salaries = np.linspace(bounds[0], bounds[1], 100)
-    performances_curve = [employee_match_performance(employee_profile, s, performance_model, label_encoder, feature_info) 
-                          for s in salaries]
-    performance_curve = np.column_stack([salaries, performances_curve])
+    salaries_curve = np.linspace(bounds[0], bounds[1], 100)
+    performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model, label_encoder, feature_info)
+    curve = np.column_stack([salaries_curve, performances_curve])
     
-    return recommended_salary, expected_performance, performance_curve
+    return recommended_salary, expected_performance, curve
 
 ########################################################################################################
 
@@ -241,46 +256,27 @@ def employer_maximize_roi(employee_profile, salary_budget, performance_model, la
     # set the bounds for optimization search
     bounds = (salary_range[0], min(salary_budget, salary_range[1]))
 
-    # use grid search
-    salaries_to_test = np.linspace(bounds[0], bounds[1], 200)  # more points = better coverage
-    
-    # evaluate ROI at each salary
-    rois = []
-    performances = []
-    for s in salaries_to_test:
-        perf = employee_match_performance(employee_profile, s, performance_model, label_encoder, feature_info)
-        roi = perf / s
-        rois.append(roi)
-        performances.append(perf)
-    
-    # find the maximum ROI and corresponding salary
-    max_roi = max(rois)
-    max_roi_indices = [i for i, r in enumerate(rois) if r == max_roi]
-    
+    # use vectorized grid search
+    salaries_to_test = np.linspace(bounds[0], bounds[1], 200)
+    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model, label_encoder, feature_info)
+    rois = performances / salaries_to_test
+
+    # find the maximum ROI
+    max_roi = np.max(rois)
+    max_roi_indices = np.where(rois == max_roi)[0]
+
     # pick the lowest salary among all salaries that give the same ROI
     best_idx = max_roi_indices[0]  # first index = lowest salary
     recommended_salary = salaries_to_test[best_idx]
     expected_performance = performances[best_idx]
     expected_roi = rois[best_idx]
     
-    # check ROI exactly at budget limit (in case grid search missed it)
-    budget_performance = employee_match_performance(employee_profile, salary_budget, performance_model, label_encoder, feature_info)
-    budget_roi = budget_performance / salary_budget
-    if budget_roi > max_roi:
-        recommended_salary = salary_budget
-        expected_performance = budget_performance
-        expected_roi = budget_roi
-    elif budget_roi == max_roi:
-        # use the lower of the two if budget also gives max ROI
-        recommended_salary = min(recommended_salary, salary_budget)
-    
     # visualization
-    salaries = np.linspace(bounds[0], bounds[1], 100)
-    performances_curve = [employee_match_performance(employee_profile, s, performance_model, label_encoder, feature_info) 
-                          for s in salaries]
-    performance_curve = np.column_stack([salaries, performances_curve])
-    
-    return recommended_salary, expected_performance, expected_roi, performance_curve
+    salaries_curve = np.linspace(bounds[0], bounds[1], 100)
+    performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model, label_encoder, feature_info)
+    curve = np.column_stack([salaries_curve, performances_curve])
+
+    return recommended_salary, expected_performance, expected_roi, curve
 
 ########################################################################################################
 
@@ -310,39 +306,32 @@ def employer_minimize_salary(employee_profile, target_performance, performance_m
 
     # set the bounds for optimization search
     bounds = (salary_range[0], min(salary_budget or salary_range[1], salary_range[1]))
+    start_salary = bounds[0]
+    max_salary = bounds[1]
 
-    # use grid search
-    salaries_to_test = np.linspace(bounds[0], bounds[1], 200)
+    # vectorized grid search
+    salaries_to_test = np.linspace(start_salary, max_salary, 200)
+    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model, label_encoder, feature_info)
 
     # find minimum salary where performance >= target_performance
-    recommended_salary = None
-    for s in salaries_to_test:
-        pred_performance = employee_match_performance(employee_profile, s, performance_model, label_encoder, feature_info)
-        if pred_performance >= target_performance:
-            recommended_salary = s
-            expected_performance = pred_performance
-            break
-
-    # use all budget if no salary is possible within budget
-    warning_message = []
-    if recommended_salary is None:
-        budget_performance = employee_match_performance(employee_profile, bounds[1], performance_model, label_encoder, feature_info)
-        recommended_salary = bounds[1]
-        expected_performance = budget_performance
-        
-        # return warning message if target not achievable
-        if budget_performance < target_performance:
-            warning_message.append(target_performance)
-            warning_message.append(bounds[1])
-            warning_message.append(budget_performance)
+    meets_target = performances >= target_performance
+    meets_indices = np.where(meets_target)[0]
+    if meets_indices.size > 0:
+        best_idx = meets_indices[0]
+        recommended_salary = salaries_to_test[best_idx]
+        expected_performance = performances[best_idx]
+        warning_message = []
+    else:
+        recommended_salary = max_salary
+        expected_performance = performances[-1]
+        warning_message = [target_performance, max_salary, expected_performance] if expected_performance < target_performance else []
 
     cost_per_performance = recommended_salary / target_performance
 
     # visualization
-    salaries = np.linspace(bounds[0], bounds[1], 100)
-    performances_curve = [employee_match_performance(employee_profile, s, performance_model, label_encoder, feature_info) 
-                          for s in salaries]
-    curve = np.column_stack([salaries, performances_curve])
+    salaries_curve = np.linspace(start_salary, max_salary, 100)
+    performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model, label_encoder, feature_info)
+    curve = np.column_stack([salaries_curve, performances_curve])
 
     return recommended_salary, expected_performance, cost_per_performance, curve, warning_message
 

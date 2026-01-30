@@ -1,0 +1,10 @@
+{
+  "dataset_based": {
+    "min_monthly_wage": 3850,
+    "max_monthly_wage": 9000
+  },
+  "oecd_based": {
+    "min_monthly_wage": 1257,
+    "max_monthly_wage": 9000
+  }
+}

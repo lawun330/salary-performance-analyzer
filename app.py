@@ -5,9 +5,12 @@ import os
 # add scripts directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
 
+# import wage bounds
+from scripts.load_wage_bounds import load_wage_bounds
+MINIMUM_MONTHLY_WAGE, MAXIMUM_MONTHLY_WAGE = load_wage_bounds()
+
+# import optimization functions
 from scripts.optimization import (
-    MINIMUM_MONTHLY_WAGE,
-    MAXIMUM_MONTHLY_WAGE,
     load_models,
     employee_maximize_salary,
     employee_match_performance,
