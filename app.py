@@ -297,7 +297,7 @@ with tabs[4]:
     with col2:
         salary_budget = st.number_input(
             "Optional Monthly Salary Budget ($)",
-            min_value=MINIMUM_MONTHLY_WAGE,
+            min_value=0,
             max_value=MAXIMUM_MONTHLY_WAGE,
             value=None,
             step=50,
@@ -307,13 +307,14 @@ with tabs[4]:
     
     if st.button("Find Minimum Monthly Salary", key="btn_case4"):
         try:
+            _budget = (salary_budget if salary_budget and salary_budget > 0 else None)
             recommended_salary, expected_performance, cost_per_perf, curve, warning_message = employer_minimize_salary(
                 employee_profile,
                 target_performance,
                 performance_model,
                 label_encoder,
                 feature_info,
-                salary_budget=salary_budget if salary_budget else None
+                salary_budget=_budget
             )
                         
             col1, col2, col3 = st.columns(3)
