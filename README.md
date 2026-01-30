@@ -22,6 +22,12 @@ The goal is to discourage both by making the trade-off explicit and to encourage
 - A fair employer optimizes pay within a budget to maximize ROI (Maximize ROI).
 - A fair employer finds the minimum pay required to achieve a target performance (Minimize Salary).
 
+### Ethical Fairness Bounds (OECD API)
+
+The optimizer enforces a legal minimum salary floor to prevent recommendations that enable underpayment or employer abuse. This floor is sourced from the [**OECD**](https://data-explorer.oecd.org), which provides official, comparable minimum wage data.
+
+At present, the optimizer is <u>limited to U.S. minimum wage values</u>. Incorrect data (e.g., wrong country, currency mismatch, or API failure triggering fallback values) could distort the floor and result in unfair or invalid salary recommendations.
+
 ## Project Structure
 ```
 root/
@@ -50,7 +56,7 @@ To run the Streamlit application on your local machine:
 
 ### Hosted Version
 
-The application is also available online at: https://salary-performance-analyzer.streamlit.app/
+The application is also available online at: https://salary-performance-analyzer.streamlit.app
 
 ## Dataset Source
 
