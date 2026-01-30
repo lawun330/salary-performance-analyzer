@@ -70,7 +70,7 @@ except Exception as e:
 st.subheader("Employee Profile")
 job_title = st.selectbox(
     "Job Title",
-    options=['Developer', 'Manager', 'Analyst', 'Designer', 'Engineer', 'Consultant', 'Director'],
+    options=['Analyst', 'Consultant', 'Developer', 'Engineer', 'Manager', 'Specialist', 'Technician'],
     key="job_title",
 )
 education_level = st.selectbox(
