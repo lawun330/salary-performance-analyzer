@@ -297,9 +297,9 @@ with tabs[4]:
     with col2:
         salary_budget = st.number_input(
             "Optional Monthly Salary Budget ($)",
-            min_value=0,
+            min_value=MINIMUM_MONTHLY_WAGE,
             max_value=MAXIMUM_MONTHLY_WAGE,
-            value=0,
+            value=MINIMUM_MONTHLY_WAGE,
             step=50,
             help="Optional: Maximum monthly salary budget.",
             key="salary_budget_case4",
@@ -326,9 +326,12 @@ with tabs[4]:
                 st.success(f"### Cost/Performance: ${cost_per_perf:,.2f}")
             
             if len(warning_message) > 0:
+                target_performance, expected_performance, recommended_salary, required_salary = (
+                    warning_message[0], warning_message[1], warning_message[2], warning_message[3]
+                )
                 st.warning(
-                    f"The current monthly salary budget cannot achieve {format_performance(warning_message[0]).lower()}. "
-                    f"Only {format_performance(warning_message[2]).lower()} is achievable; minimum recommended is ${recommended_salary:,.2f}/month (never below minimum wage)."
+                    f"To achieve {format_performance(target_performance).lower()}, you need a minimum monthly salary of \${required_salary:,.2f}. "
+                    f"With your current budget, the best possible outcome is {format_performance(expected_performance).lower()}, at an affordable budget of \${recommended_salary:,.2f} per month."
                 )
             else:
                 st.info(

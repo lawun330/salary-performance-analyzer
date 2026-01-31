@@ -1,3 +1,6 @@
 # cache
 .ipynb_checkpoints/
 __pycache__/
+
+# IDE settings
+.cursor/

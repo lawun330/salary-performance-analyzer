@@ -1,6 +1,6 @@
 # Insights
 
-I learned several important concepts and techniques in this project:
+Key concepts and techniques in this project:
 
 ### End-to-End Project Workflow
   - Choose dataset and define prediction targets
@@ -34,12 +34,18 @@ I learned several important concepts and techniques in this project:
 
 ### Optimization
 - **Rationale**: Prediction tells what happens; optimization chooses what to do.
-- **Note**: Grid search used here is not `GridSearchCV`. This grid search is a simple search over a grid of candidate salary values. The salary range is discretized into many evenly spaced points (a grid), the model is evaluated at each point, and the best point is selected based on the chosen objective.
+- **How it works**: This is not `GridSearchCV`. The salary range is discretized into many evenly spaced points (a grid). One DataFrame is built with one row per point (same employee profile, varying salary); the model is run once on the whole DataFrame (batch prediction), then the best point is selected from the results. No per-point loop; one batch call per grid.
 - **Objectives**:
   - Maximize performance (budget-constrained)
   - Maximize ROI (budget-constrained)
   - Minimize salary (meet target; optional budget cap)
 - **Tie-break rule**: Choose the lowest salary among best-scoring options
+
+### Case 4 Problem-Solving Logic (employer_minimize_salary)
+- Search only between the minimum wage floor and the spending cap. Build a grid of salaries from cap down to floor, predict performance at each, then find the lowest salary in that range that reaches the target performance.
+  - **Case 1 (target achievable)**: That lowest salary reaches the target. That salary is recommended; no warning.
+  - **Case 2 (target not achievable)**: The best performance achievable within budget is lower than the target. The lowest salary that achieves that best-achievable performance is recommended. Separately, the lowest salary in the full wage range that would reach the target is computed and included in the warning (e.g. "_Need at least $X to get the target_").
+- **Summary**: Target = what the employer wants. When achievable, the minimum pay that hits the target is recommended. When not achievable, the minimum pay for the best achievable performance is recommended, and the warning states how much would be needed to hit the target.
 
 ### Constraints and Edge Cases
 - **Clipping**: Predicted salaries are clipped to a realistic range to prevent unusable recommendations.

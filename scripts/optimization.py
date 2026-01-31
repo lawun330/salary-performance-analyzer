@@ -280,59 +280,119 @@ def employer_maximize_roi(employee_profile, salary_budget, performance_model, la
 
 ########################################################################################################
 
+# Helper function
+def _min_salary_for_performance(salaries, performances, threshold, fallback_salary, salaries_ascending=True):
+    """
+    Find minimum salary where performance >= threshold. Never returns None.
+    salaries_ascending: True if salaries ordered low -> high, False if high -> low.
+    If no such salary, returns (fallback_salary, performance at end of range).
+    """
+    idx = np.where(performances >= threshold)[0]
+    if idx.size > 0:
+        i = idx[0] if salaries_ascending else idx[-1]  # return the minimum salary index in any order
+        return float(salaries[i]), float(performances[i])
+    perf_fallback = float(performances[-1] if salaries_ascending else performances[0])  # return the top performance in any order
+    return float(fallback_salary), perf_fallback
+
+########################################################################################################
+
 # Case 4: (For Employer) Salary Minimization for Target Performance
-def employer_minimize_salary(employee_profile, target_performance, performance_model, label_encoder, 
-                            feature_info, salary_budget=None, 
+def employer_minimize_salary(employee_profile, target_performance, performance_model, label_encoder,
+                            feature_info, salary_budget=None,
                             salary_range=(MINIMUM_MONTHLY_WAGE, MAXIMUM_MONTHLY_WAGE)):
     """
-    Find minimum salary for employer to achieve target performance
-    
+    Find the minimum monthly salary that achieves a target performance subject to an optional spending limit.
+
+    ================================================================
+    *********** Terms (definitions and how they relate): ***********
+    ================================================================
+    Budget bounds:
+    - start_salary: Minimum wage; no recommended salary goes below this.
+    - spending_budget: Maximum we are allowed to consider; search range is [start_salary...spending_budget].
+
+    Performance levels (what each score means):
+    * target_performance: the desired performance level an employer wants to achieve within budget.
+    - calculated_performance: the performance the employer actually can get (it may be target_performance or lower_standard_performance) within budget.
+    - lower_standard_performance: when target performance is not achievable; this is the "next best performance" that the employer can get within budget.
+    - expected_performance: the performance the employer expects to get (it may be target_performance or lower_standard_performance) within budget.
+
+    Salaries (what each amount means):
+    - calculated_salary: the lowest salary (within budget) that achieves target_performance.
+    - cheaper_calculated_salary: the lowest salary (within budget) that achieves lower_standard_performance.
+    - recommended_salary: the salary the employer should offer (it may be calculated_salary or cheaper_calculated_salary).
+    * required_salary: the lowest salary in the full wage range that could achieve target_performance.
+
+    All recommended salaries are at least start_salary (MINIMUM_MONTHLY_WAGE).
+    ================================================================
+
     Args:
-        employee_profile: dict with employee features (without Monthly_Salary and Performance_Score)
-        target_performance: desired performance level (1-5) that employer needs (can be integer like 4.0 or fractional like 4.5)
+        employee_profile: dict of employee features (no Monthly_Salary or Performance_Score)
+        target_performance: desired performance score (1–5)
         performance_model: trained performance prediction model
         label_encoder: label encoder for performance scores
-        feature_info: dictionary containing feature order information
-        salary_budget: optional maximum salary budget
-        salary_range: tuple of (min_monthly_salary, max_monthly_salary) for validation
-    
+        feature_info: dict with feature order information
+        salary_budget: optional; if None, spending_budget = salary_range[1]
+        salary_range: (min_monthly_salary, max_monthly_salary); start_salary = salary_range[0]
+
     Returns:
-        recommended_salary: minimum salary that should be offered to achieve target performance
-        expected_performance: expected performance at recommended salary
-        cost_per_performance: cost per performance point
-        curve: array of (salary, performance) pairs for visualization
-        warning_message: Warning message string if target not achievable
+        recommended_salary: calculated_salary if target achievable, else cheaper_calculated_salary
+        expected_performance: calculated_performance if achievable, else lower_standard_performance
+        cost_per_performance: recommended_salary / max(expected_performance, 1e-9)
+        curve: (salary, performance) pairs for visualization
+        warning_message: [] if achievable; else [target_performance, expected_performance, recommended_salary, required_salary]
     """
+    start_salary = salary_range[0]
+    spending_budget = min(salary_budget or salary_range[1], salary_range[1])
 
-    # set the bounds for optimization search
-    bounds = (salary_range[0], min(salary_budget or salary_range[1], salary_range[1]))
-    start_salary = bounds[0]
-    max_salary = bounds[1]
+    # try full budget, then lower til a match is found (e.g. 1000 -> 100 -> 10)
+    ## performances[0] = at spending_budget, performances[-1] = at start_salary
+    salaries_to_test = np.linspace(spending_budget, start_salary, 200)
+    performances = predict_same_employee_performance_batch(
+        employee_profile, salaries_to_test, performance_model, label_encoder, feature_info
+    )
 
-    # vectorized grid search
-    salaries_to_test = np.linspace(start_salary, max_salary, 200)
-    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model, label_encoder, feature_info)
+    # look for target performance starting from budget
+    ## minimum budget that achieves target performance = allocated_budget
+    calculated_salary, calculated_performance = _min_salary_for_performance(
+        salaries_to_test, performances, target_performance, start_salary, salaries_ascending=False
+    )
+    calculated_salary = max(calculated_salary, start_salary)  # ensure minimum wage is enforced
 
-    # find minimum salary where performance >= target_performance
-    meets_target = performances >= target_performance
-    meets_indices = np.where(meets_target)[0]
-    if meets_indices.size > 0:
-        best_idx = meets_indices[0]
-        recommended_salary = salaries_to_test[best_idx]
-        expected_performance = performances[best_idx]
+    if calculated_performance >= target_performance:
+        # CASE 1: target performance is within budget
+        recommended_salary = calculated_salary
+        expected_performance = calculated_performance
         warning_message = []
+        ## CASE 1 END ##
     else:
-        # never recommend below minimum wage; recommend min wage or full budget
-        recommended_salary = max(max_salary, start_salary)
-        # performance at the salary we actually recommend: [0]=min wage, [-1]=full budget
-        expected_performance = performances[0] if recommended_salary == start_salary else performances[-1]
-        # warn if target not achievable
-        warning_message = [target_performance, recommended_salary, expected_performance] if expected_performance < target_performance else []
+        # CASE 2A: target performance is not within budget: use lower standard performance
+        lower_standard_performance = calculated_performance
+        cheaper_calculated_salary, _ = _min_salary_for_performance(
+            salaries_to_test, performances, lower_standard_performance, start_salary, salaries_ascending=False
+        )
+        cheaper_calculated_salary = max(cheaper_calculated_salary, start_salary)  # ensure minimum wage is enforced
 
-    cost_per_performance = recommended_salary / target_performance
+        recommended_salary = cheaper_calculated_salary
+        expected_performance = lower_standard_performance
+        ## CASE 2A END ##
+
+        # CASE 2B: target performance is not within budget: ask how much more budget is needed to get target performance
+        salaries_full_range = np.linspace(salary_range[0], salary_range[1], 200)
+        perfs_full_range = predict_same_employee_performance_batch(
+            employee_profile, salaries_full_range, performance_model, label_encoder, feature_info
+        )
+        required_salary, _ = _min_salary_for_performance(
+            salaries_full_range, perfs_full_range, target_performance, salary_range[1], salaries_ascending=False
+        )
+        required_salary = max(required_salary, start_salary)  # ensure minimum wage is enforced
+        ## CASE 2B END ##
+
+        warning_message = [target_performance, expected_performance, recommended_salary, required_salary]
+
+    cost_per_performance = recommended_salary / max(expected_performance, 1e-9)
 
     # visualization
-    salaries_curve = np.linspace(start_salary, max_salary, 100)
+    salaries_curve = np.linspace(start_salary, spending_budget, 100)
     performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model, label_encoder, feature_info)
     curve = np.column_stack([salaries_curve, performances_curve])
 
