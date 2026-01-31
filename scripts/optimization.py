@@ -382,7 +382,7 @@ def employer_minimize_salary(employee_profile, target_performance, performance_m
             employee_profile, salaries_full_range, performance_model, label_encoder, feature_info
         )
         required_salary, _ = _min_salary_for_performance(
-            salaries_full_range, perfs_full_range, target_performance, salary_range[1], salaries_ascending=False
+            salaries_full_range, perfs_full_range, target_performance, salary_range[1], salaries_ascending=True  # start from minimum wage and search up to maximum wage
         )
         required_salary = max(required_salary, start_salary)  # ensure minimum wage is enforced
         ## CASE 2B END ##

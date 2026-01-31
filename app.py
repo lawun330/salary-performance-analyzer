@@ -1,6 +1,9 @@
+import base64
+import io
 import streamlit as st
 import sys
 import os
+import matplotlib.pyplot as plt
 
 # add scripts directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
@@ -39,6 +42,15 @@ css_path = os.path.join(os.path.dirname(__file__), "app.css")
 if os.path.isfile(css_path):
     with open(css_path, "r", encoding="utf-8") as f:
         st.markdown(f"<style>\n{f.read()}\n</style>", unsafe_allow_html=True)
+
+# embed matplotlib figure as base64 image to avoid Streamlit media storage and fix MediaFileStorageError
+def _fig_to_base64_html(fig):
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    img_b64 = base64.b64encode(buf.read()).decode()
+    plt.close(fig)
+    return f'<img src="data:image/png;base64,{img_b64}" alt="Performance curve" style="max-width:100%;">'
 
 # load models (cached for performance)
 @st.cache_resource
@@ -231,7 +243,7 @@ with tabs[2]:
             # visualization
             st.subheader("Performance vs Monthly Salary Curve")
             fig = plot_performance_curve(curve, recommended_salary, expected_performance)
-            st.pyplot(fig)
+            st.markdown(_fig_to_base64_html(fig), unsafe_allow_html=True)
             
         except Exception as e:
             st.error(f"Error: {e}")
@@ -276,7 +288,7 @@ with tabs[3]:
             # visualization
             st.subheader("Performance vs Monthly Salary Curve")
             fig = plot_performance_curve(curve, recommended_salary, expected_performance)
-            st.pyplot(fig)
+            st.markdown(_fig_to_base64_html(fig), unsafe_allow_html=True)
             
         except Exception as e:
             st.error(f"Error: {e}")
@@ -346,7 +358,7 @@ with tabs[4]:
             ax = fig.gca()
             ax.axhline(target_performance, color='g', linestyle=':', alpha=0.8, label=f'Target: {format_performance(target_performance)}')
             ax.legend()
-            st.pyplot(fig)
+            st.markdown(_fig_to_base64_html(fig), unsafe_allow_html=True)
             
         except Exception as e:
             st.error(f"Error: {e}")
