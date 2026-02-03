@@ -212,7 +212,8 @@ def employer_maximize_performance(employee_profile, salary_budget, performance_m
     
     # use vectorized grid search
     salaries_to_test = np.linspace(bounds[0], bounds[1], 200)  # more points = better coverage
-    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model, label_encoder, feature_info)
+    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model,
+                                                           label_encoder, feature_info)
     
     # find the maximum performance
     max_performance = np.max(performances)
@@ -225,7 +226,8 @@ def employer_maximize_performance(employee_profile, salary_budget, performance_m
 
     # visualization
     salaries_curve = np.linspace(bounds[0], bounds[1], 100)
-    performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model, label_encoder, feature_info)
+    performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model,
+                                                                 label_encoder, feature_info)
     curve = np.column_stack([salaries_curve, performances_curve])
     
     return recommended_salary, expected_performance, curve
@@ -258,7 +260,8 @@ def employer_maximize_roi(employee_profile, salary_budget, performance_model, la
 
     # use vectorized grid search
     salaries_to_test = np.linspace(bounds[0], bounds[1], 200)
-    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model, label_encoder, feature_info)
+    performances = predict_same_employee_performance_batch(employee_profile, salaries_to_test, performance_model,
+                                                           label_encoder, feature_info)
     rois = performances / salaries_to_test
 
     # find the maximum ROI
@@ -273,7 +276,8 @@ def employer_maximize_roi(employee_profile, salary_budget, performance_model, la
     
     # visualization
     salaries_curve = np.linspace(bounds[0], bounds[1], 100)
-    performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model, label_encoder, feature_info)
+    performances_curve = predict_same_employee_performance_batch(employee_profile, salaries_curve, performance_model,
+                                                                 label_encoder, feature_info)
     curve = np.column_stack([salaries_curve, performances_curve])
 
     return recommended_salary, expected_performance, expected_roi, curve
